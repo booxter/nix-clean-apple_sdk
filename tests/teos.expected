@@ -64,10 +64,9 @@ in
       rustfmt
     ];
 
-    buildInputs =
-      [
-        openssl
-      ];
+    buildInputs = [
+      openssl
+    ];
 
     passthru.updateScript = updateScript;
 
