@@ -1,0 +1,9 @@
+#!/bin/sh
+
+for file in $(find tests -name '*.nix'); do
+	./nix-clean-apple_sdk "$file" "${file%.nix}.out"
+	diff -u "${file%.nix}.out" "${file%.nix}.expected" || {
+		echo "Test failed for $file"
+		exit 1
+	}
+done

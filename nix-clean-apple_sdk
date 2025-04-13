@@ -1,0 +1,339 @@
+#!/usr/bin/env python
+
+# Tool that receives a file name pointing to .nix file and applies a number of
+# substitutions to it. Specifically, it removes the usage of
+# darwin.apple_sdk.frameworks from the files since they are no longer needed.
+
+# This script is very silly. Ideally, we'd use AST to parse the .nix files but
+# it's a one-off script that we won't need after the cleanup. :)
+
+import argparse
+import functools
+import re
+import os
+
+
+# from: TODO
+frameworks = [
+    "AGL",
+    "AVFAudio",
+    "AVFCapture",
+    "AVFCore",
+    "AVFoundation",
+    "AVKit",
+    "Accelerate",
+    "Accessibility",
+    "Accounts",
+    "AdServices",
+    "AdSupport",
+    "AddressBook",
+    "AddressBookCore",
+    "AppKit",
+    "AppTrackingTransparency",
+    "AppleScriptKit",
+    "AppleScriptObjC",
+    "ApplicationServices",
+    "AudioToolbox",
+    "AudioToolboxCore",
+    "AudioUnit",
+    "AudioVideoBridging",
+    "AuthenticationServices",
+    "AutomaticAssessmentConfiguration",
+    "Automator",
+    "BackgroundTasks",
+    "BusinessChat",
+    "CFNetwork",
+    "CHIP",
+    "CalendarStore",
+    "CallKit",
+    "Carbon",
+    "ClassKit",
+    "CloudKit",
+    "Cocoa",
+    "Collaboration",
+    "ColorSync",
+    "Combine",
+    "Contacts",
+    "ContactsPersistence",
+    "ContactsUI",
+    "CoreAudio",
+    "CoreAudioKit",
+    "CoreAudioTypes",
+    "CoreBluetooth",
+    "CoreData",
+    "CoreDisplay",
+    "CoreFoundation",
+    "CoreGraphics",
+    "CoreHaptics",
+    "CoreImage",
+    "CoreLocation",
+    "CoreMIDI",
+    "CoreMIDIServer",
+    "CoreML",
+    "CoreMedia",
+    "CoreMediaIO",
+    "CoreMotion",
+    "CoreServices",
+    "CoreSpotlight",
+    "CoreSymbolication",
+    "CoreTelephony",
+    "CoreText",
+    "CoreVideo",
+    "CoreWLAN",
+    "CreateML",
+    "CryptoKit",
+    "CryptoTokenKit",
+    "DVDPlayback",
+    "DataDetection",
+    "DebugSymbols",
+    "DeveloperToolsSupport",
+    "DeviceActivity",
+    "DeviceCheck",
+    "DirectoryService",
+    "DiscRecording",
+    "DiscRecordingUI",
+    "DiskArbitration",
+    "DisplayServices",
+    "DriverKit",
+    "EventKit",
+    "ExceptionHandling",
+    "ExecutionPolicy",
+    "ExposureNotification",
+    "ExternalAccessory",
+    "FWAUserLib",
+    "FileProvider",
+    "FileProviderUI",
+    "FinderSync",
+    "ForceFeedback",
+    "Foundation",
+    "GLKit",
+    "GLUT",
+    "GSS",
+    "GameCenterFoundation",
+    "GameCenterUI",
+    "GameCenterUICore",
+    "GameController",
+    "GameKit",
+    "GameplayKit",
+    "GroupActivities",
+    "Hypervisor",
+    "ICADevices",
+    "IMServicePlugIn",
+    "IOBluetooth",
+    "IOBluetoothUI",
+    "IOKit",
+    "IOSurface",
+    "IOUSBHost",
+    "IdentityLookup",
+    "ImageCaptureCore",
+    "ImageIO",
+    "InputMethodKit",
+    "InstallerPlugins",
+    "InstantMessage",
+    "Intents",
+    "IntentsUI",
+    "JavaNativeFoundation",
+    "JavaRuntimeSupport",
+    "JavaScriptCore",
+    "JavaVM",
+    "Kerberos",
+    "Kernel",
+    "KernelManagement",
+    "LDAP",
+    "LatentSemanticMapping",
+    "LinkPresentation",
+    "LocalAuthentication",
+    "LocalAuthenticationEmbeddedUI",
+    "MLCompute",
+    "MailKit",
+    "ManagedSettings",
+    "MapKit",
+    "MediaAccessibility",
+    "MediaLibrary",
+    "MediaPlayer",
+    "MediaToolbox",
+    "Message",
+    "Metal",
+    "MetalKit",
+    "MetalPerformanceShaders",
+    "MetalPerformanceShadersGraph",
+    "MetricKit",
+    "ModelIO",
+    "MultipeerConnectivity",
+    "MultitouchSupport",
+    "MusicKit",
+    "NaturalLanguage",
+    "NearbyInteraction",
+    "NetFS",
+    "Network",
+    "NetworkExtension",
+    "NotificationCenter",
+    "OSAKit",
+    "OSLog",
+    "OpenAL",
+    "OpenCL",
+    "OpenDirectory",
+    "OpenGL",
+    "PCSC",
+    "PDFKit",
+    "PHASE",
+    "ParavirtualizedGraphics",
+    "PassKit",
+    "PassKitCore",
+    "PencilKit",
+    "Photos",
+    "PhotosUI",
+    "PreferencePanes",
+    "PushKit",
+    "QTKit",
+    "Quartz",
+    "QuartzCore",
+    "QuickLook",
+    "QuickLookThumbnailing",
+    "QuickLookUI",
+    "QuickTime",
+    "RealityFoundation",
+    "RealityKit",
+    "ReplayKit",
+    "Ruby",
+    "SafariServices",
+    "SceneKit",
+    "ScreenCaptureKit",
+    "ScreenSaver",
+    "ScreenTime",
+    "ScriptingBridge",
+    "Security",
+    "SecurityFoundation",
+    "SecurityInterface",
+    "SensorKit",
+    "ServiceManagement",
+    "ShazamKit",
+    "SignpostMetrics",
+    "SkyLight",
+    "Social",
+    "SoundAnalysis",
+    "Speech",
+    "SpriteKit",
+    "StoreKit",
+    "SwiftUI",
+    "SyncServices",
+    "System",
+    "SystemConfiguration",
+    "SystemExtensions",
+    "TWAIN",
+    "TabularData",
+    "Tcl",
+    "Tk",
+    "UIFoundation",
+    "URLFormatting",
+    "UniformTypeIdentifiers",
+    "UserNotifications",
+    "UserNotificationsUI",
+    "VideoDecodeAcceleration",
+    "VideoSubscriberAccount",
+    "VideoToolbox",
+    "Virtualization",
+    "Vision",
+    "WebKit",
+    "WidgetKit",
+    "iTunesLibrary",
+    "vmnet",
+]
+# start filtering from the longest because some framework names are substrings of longer names
+frameworks = list(reversed(sorted(frameworks, key=len)))
+
+
+def argument_is_used(content, argument):
+    if re.match(rf"\s*{argument}\.\w+\s*", content):
+        return True
+    return False
+
+
+# TODO: This is ugly.
+def remove_argument(argument, content):
+    if argument_is_used(content, argument):
+        return content
+    lines = content.splitlines()
+    new_lines = []
+    reached_end = False
+    for line in lines:
+        if reached_end:
+            new_lines.append(line)
+            continue
+        if '}' in line:
+            new_lines.append(line)
+            reached_end = True
+            continue
+        if re.match(rf"\s*{argument}\s*,", line) or re.match(rf"\s*,\s*{argument}\s*", line):
+            continue
+        new_lines.append(line)
+    return "\n".join(new_lines)
+
+
+def remove_frameworks_from_lists(content):
+    for framework in frameworks:
+        content = re.sub(rf"(\[[^\]]*?)(\s*[\w\.]*{framework}\s*)(.*?\])", r"\1\3", content, flags=re.DOTALL)
+    return content
+
+
+pipeline = [
+    {
+        "name": "Remove `with *.apple_sdk.*;`",
+        "action": lambda content: re.sub(r"with\s*[\w\.]*apple_sdk[\w\.]*;", "", content),
+    },
+    {
+        "name": "Remove frameworks from lists",
+        "action": lambda content: remove_frameworks_from_lists(content),
+    },
+    # special cases
+    {
+        "name": "Remove ++ optionals isDarwin []",
+        "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*", "", content),
+    },
+    {
+        "name": "Remove X = optionals isDarwin [];",
+        "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*;", "", content),
+    },
+    {
+        "name": "Remove ++ ([])",
+        "action": lambda content: re.sub(r"\s*\+\+\s*\(\s*\[\s*\]\s*\)", "", content),
+    },
+
+    {
+        "name": "X = old.X;",
+        "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*old\.\1;", "", content),
+    },
+] + [
+    {
+        "name": f"Remove unused argument {argument}",
+        "action": functools.partial(remove_argument, argument),
+    }
+    for argument in ("darwin", "stdenv")
+]
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Clean up .nix files by removing darwin.apple_sdk.frameworks.")
+    parser.add_argument("file", help="Path to the .nix file to clean up")
+    parser.add_argument("out", help="Output path")
+    args = parser.parse_args()
+
+    if not os.path.isfile(args.file):
+        print(f"Error: {args.file} is not a valid file.")
+        return
+
+    with open(args.file) as f:
+        content = f.read()
+
+    for step in pipeline:
+        content = step["action"](content)
+
+    with open(args.out, "w") as f:
+        f.write(content + "\n")
+
+    os.system(f"nixfmt {args.out}")
+    print(f"Cleaned up {args.file}.")
+
+
+if __name__ == "__main__":
+    main()
