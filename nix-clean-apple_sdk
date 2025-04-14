@@ -243,13 +243,13 @@ frameworks = [
 frameworks = list(reversed(sorted(frameworks, key=len)))
 
 
+# TODO: This is ugly.
 def argument_is_used(content, argument):
     if re.match(rf".*\s*{argument}\.\w+\s*", content, flags=re.DOTALL):
         return True
     return False
 
 
-# TODO: This is ugly.
 def remove_argument(argument, content):
     if argument_is_used(content, argument):
         return content
@@ -265,6 +265,38 @@ def remove_argument(argument, content):
             reached_end = True
             continue
         if re.match(rf"\s*{argument}\s*,", line) or re.match(rf"\s*,\s*{argument}\s*", line):
+            continue
+        new_lines.append(line)
+    return "\n".join(new_lines)
+
+
+def inherit_is_used(content, inherit):
+    found_body = False
+    for line in content.splitlines():
+        if found_body:
+            if re.match(rf"{inherit}", line):
+                return True
+        if line != "in":
+            continue
+        found_body = True
+    return False
+
+
+def remove_inherit(inherit, content):
+    if inherit_is_used(content, inherit):
+        return content
+    lines = content.splitlines()
+    new_lines = []
+    reached_end = False
+    for line in lines:
+        if reached_end:
+            new_lines.append(line)
+            continue
+        if line == "in":
+            new_lines.append(line)
+            reached_end = True
+            continue
+        if re.match(rf".*inherit\s*\(.*\)\s*{inherit};", line):
             continue
         new_lines.append(line)
     return "\n".join(new_lines)
@@ -302,6 +334,10 @@ pipeline = [
         "action": lambda content: remove_frameworks_from_lists(content),
     },
     {
+        "name": "Remove inherit (*.apple_sdk.*) ...",
+        "action": lambda content: re.sub(r"\s*inherit\s*\(\s*[\w\.]*apple_sdk[\w\.]*\s*\)[^;]*;", "", content),
+    },
+    {
         "name": "Remove ++ optionals isDarwin []",
         "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*", "", content),
     },
@@ -331,10 +367,21 @@ pipeline = [
     },
 ] + [
     {
+        "name": f"Remove unused inherit {inherit}",
+        "action": functools.partial(remove_inherit, inherit),
+    }
+    for inherit in ("isDarwin", "optionals")
+] + [
+    {
         "name": f"Remove unused argument {argument}",
         "action": functools.partial(remove_argument, argument),
     }
     for argument in ("darwin", "stdenv")
+] + [
+    {
+        "name": f"Remove empty let/in",
+        "action": lambda content: re.sub(r"let\s*in\s+", "", content, flags=re.DOTALL),
+    }
 ]
 
 
