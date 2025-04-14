@@ -272,22 +272,30 @@ def remove_argument(argument, content):
 
 def remove_frameworks_from_lists(content):
     for framework in frameworks:
-        content = re.sub(rf"(\[[^\]\"]*?)(\s*[\w\.]*{framework}\s*)(.*?\])", r"\1\3", content, flags=re.DOTALL)
+        content = re.sub(rf"(\[[^\]\"]*?)([\w\.]*{framework})(.*?\])", r"\1\3", content, flags=re.DOTALL)
     return content
 
 
 pipeline = [
+    #{
+    #    "name": "breakpoint",
+    #    "action": lambda content: breakpoint(),
+    #},
     {
         "name": "Remove `with *.apple_sdk.*;`",
         "action": lambda content: re.sub(r"with\s*[\w\.]*apple_sdk[\w\.]*;", "", content),
     },
     {
-        "name": "Remove frameworks from lists",
-        "action": lambda content: remove_frameworks_from_lists(content),
+        "name": "Simplify optionals isDarwin: ([...]) -> [...]",
+        "action": lambda content: re.sub(r"(\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*)\((\s*\[[^\]]*\]\s*)\)", r"\1\2", content),
     },
     {
-        "name": "Remove ++ optionals isDarwin ([])",
-        "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\(\s*\[\s*\]\s*\)\s*", "", content),
+        "name": "Simplify optionals isDarwin [newline...] -> isDarwin [...]",
+        "action": lambda content: re.sub(r"(\s*[\w\.]*optionals\s*[\w\.]*isDarwin)\s*(\[[^\]]*\]\s*)", r"\1 \2", content),
+    },
+    {
+        "name": "Remove frameworks from lists",
+        "action": lambda content: remove_frameworks_from_lists(content),
     },
     {
         "name": "Remove ++ optionals isDarwin []",
@@ -305,7 +313,6 @@ pipeline = [
         "name": "Remove ++ ([])",
         "action": lambda content: re.sub(r"\s*\+\+\s*\(\s*\[\s*\]\s*\)", "", content),
     },
-
     {
         "name": "X = old.X;",
         "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*old\.\1;", "", content),
