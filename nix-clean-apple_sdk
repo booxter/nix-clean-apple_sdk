@@ -242,6 +242,9 @@ frameworks = [
 ] + [
     "libs.xpc",
     "Xplugin",
+
+    # should more be added to the list?
+    "configd",
 ]
 # start filtering from the longest because some framework names are substrings of longer names
 frameworks = list(reversed(sorted(frameworks, key=len)))
@@ -399,6 +402,10 @@ pipeline = [
     {
         "name": "Remove ++ optional isDarwin <framework>",
         "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*({'|'.join(frameworks)})\s*", "", content),
+    },
+    {
+        "name": "Remove ++ optional(s) isDarwin [ <framework> ]",
+        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optionals?\s*[\w\.]*isDarwin\s*\[\s*({'|'.join(frameworks)})\s*\]", "", content),
     },
     {
         "name": "Remove ++ optional (isDarwin && ...) <framework>",

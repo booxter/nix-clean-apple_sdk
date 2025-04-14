@@ -1316,15 +1316,12 @@ self: super:
         "--without-dtrace"
       ];
 
-    buildInputs =
-      old.buildInputs
-      ++ [
-        xorg.pixman
-        xorg.libXfont2
-        xorg.xtrans
-        xorg.libxcvt
-      ]
-      ++ lib.optional stdenv.hostPlatform.isDarwin [ Xplugin ];
+    buildInputs = old.buildInputs ++ [
+      xorg.pixman
+      xorg.libXfont2
+      xorg.xtrans
+      xorg.libxcvt
+    ];
   });
 
   lndir = super.lndir.overrideAttrs (attrs: {
