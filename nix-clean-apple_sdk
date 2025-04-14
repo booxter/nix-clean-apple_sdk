@@ -437,6 +437,10 @@ pipeline = [
         "action": lambda content: re.sub(rf"\s*(\w+)\s*=\s*[\w\.]*?optionals?\s*[\w\.]*?isDarwin\s*([\w\.]+\.)?({'|'.join(frameworks)})\s*;", "", content),
     },
     {
+        "name": "Remove optional(s) isDarwin framework ++",
+        "action": lambda content: re.sub(rf"[\w\.]*?optionals?\s*[\w\.]*?isDarwin\s*([\w\.]+\.)?({'|'.join(frameworks)})\s*\+\+", "", content),
+    },
+    {
         "name": "Remove buildInputs = [ *apple_sdk* ];",
         "action": lambda content: re.sub(r"\s*buildInputs\s*=\s*\[\s*[\w\.]*apple_sdk[\w\.]*\s*\]\s*;", "", content),
     },
