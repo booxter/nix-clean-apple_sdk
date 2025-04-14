@@ -240,7 +240,8 @@ frameworks = [
     "iTunesLibrary",
     "vmnet",
 ] + [
-    "libs.xpc"
+    "libs.xpc",
+    "Xplugin",
 ]
 # start filtering from the longest because some framework names are substrings of longer names
 frameworks = list(reversed(sorted(frameworks, key=len)))
@@ -248,7 +249,9 @@ frameworks = list(reversed(sorted(frameworks, key=len)))
 
 # TODO: This is ugly.
 def argument_is_used(content, argument):
-    if re.match(rf".*\s*{argument}\.\w+\s*", content, flags=re.DOTALL):
+    match_variable = r".*\${" + argument + "}"
+    if (re.match(rf".*\s*{argument}\.\w+\s*", content, flags=re.DOTALL) or
+        re.match(f"{match_variable}", content, flags=re.DOTALL)):
         return True
     return False
 
@@ -291,9 +294,11 @@ def inherit_is_used(content, inherit):
     found_body = False
     for line in content.splitlines():
         if found_body:
-            if re.match(rf"{inherit}", line):
+            if re.match(rf".*inherit.*{inherit}.*;", line):
+                continue
+            if re.match(rf".*{inherit}", line):
                 return True
-        if line != "in":
+        if line != "let":
             continue
         found_body = True
     return False
@@ -381,7 +386,7 @@ pipeline = [
     },
     {
         "name": "Remove ++ optionals isDarwin []",
-        "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*", "", content),
+        "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]", "", content),
     },
     {
         "name": "Remove ++ optionals (isDarwin && ...) []",
@@ -434,12 +439,12 @@ pipeline = [
         "name": f"Remove unused argument {argument}",
         "action": functools.partial(remove_argument, argument),
     }
-    for argument in ("darwin", "stdenv", "apple_sdk")
+    for argument in ["darwin", "stdenv", "apple_sdk"] + frameworks
 ] + [
     {
         "name": f"Remove empty let/in",
         "action": lambda content: re.sub(r"let\s*in\s+", "", content, flags=re.DOTALL),
-    }
+    },
 ]
 
 
