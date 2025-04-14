@@ -350,8 +350,8 @@ pipeline = [
         "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*\[\s*\]\s*", "", content),
     },
     {
-        "name": "Remove ++ optional isDarwin X",
-        "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]+\s*", "", content),
+        "name": "Remove ++ optional isDarwin *apple_sdk*",
+        "action": lambda content: re.sub(r"(\s*)\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]*apple_sdk[\w\.]*\s*", r"\1", content),
     },
     {
         "name": "Remove X = optionals isDarwin [];",
