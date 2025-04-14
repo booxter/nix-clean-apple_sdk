@@ -12,8 +12,9 @@ import functools
 import re
 import os
 
+_FILENAME = ""
 
-# from: TODO
+
 frameworks = [
     "AGL",
     "AVFAudio",
@@ -318,10 +319,23 @@ def remove_inherit(inherit, content):
     return "\n".join(new_lines)
 
 
-def remove_frameworks_from_lists(content):
+def remove_frameworks_from_lists(content, skip_frameworks=None):
     for framework in frameworks:
-        content = re.sub(rf"(\[[^\]\"]*?)([\w\.]*{framework}\n)(.*?\])", r"\1\3", content, flags=re.DOTALL)
+        if skip_frameworks and framework in skip_frameworks:
+            continue
+        content = re.sub(rf"(\[[^\]\"]*?\s+)(({framework}|[\w\.]+\.{framework})\n)(.*?\])", r"\1\4", content, flags=re.DOTALL)
     return content
+
+
+# Avoid duplicate names defined in subpackage sets
+def get_skip_frameworks():
+    if "perl-packages" in _FILENAME:
+        return [
+            "Tcl",
+            "Tk",
+            "OpenGL",
+        ]
+    return []
 
 
 pipeline = [
@@ -359,7 +373,7 @@ pipeline = [
     },
     {
         "name": "Remove frameworks from lists",
-        "action": lambda content: remove_frameworks_from_lists(content),
+        "action": lambda content: remove_frameworks_from_lists(content, skip_frameworks=get_skip_frameworks()),
     },
     {
         "name": "Remove inherit (*.apple_sdk.*) ...",
@@ -386,12 +400,24 @@ pipeline = [
         "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*;", "", content),
     },
     {
+        "name": "Remove X = optional isDarwin *apple_sdk*;",
+        "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]*apple_sdk[\w\.]*\s*;", "", content),
+    },
+    {
+        "name": "Remove buildInputs = [ *apple_sdk* ];",
+        "action": lambda content: re.sub(r"\s*buildInputs\s*=\s*\[\s*[\w\.]*apple_sdk[\w\.]*\s*\]\s*;", "", content),
+    },
+    {
         "name": "Handle X = optionals isDarwin [] ++",
         "action": lambda content: re.sub(r"(\s*(\w+)\s*=\s*)[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*\+\+", r"\1", content),
     },
     {
         "name": "Remove ++ ([])",
         "action": lambda content: re.sub(r"\s*\+\+\s*\(\s*\[\s*\]\s*\)", "", content),
+    },
+    {
+        "name": "Simplify ([]) -> []",
+        "action": lambda content: re.sub(r"\((\s*\[)\s*(\]\s*)\)", r"\1\2", content),
     },
     {
         "name": "X = old.X;",
@@ -429,6 +455,9 @@ def main():
 
     with open(args.file) as f:
         content = f.read()
+
+    global _FILENAME
+    _FILENAME = args.file
 
     for step in pipeline:
         content = step["action"](content)
