@@ -314,6 +314,14 @@ pipeline = [
     #    "action": lambda content: breakpoint(),
     #},
     {
+        "name": "Remove ++ optional isDarwin *apple_sdk*",
+        "action": lambda content: re.sub(r"(\s*)\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]*apple_sdk[\w\.]*\s*", r"\1", content),
+    },
+    {
+        "name": "Remove ++ optionals isDarwin (*apple_sdk*)",
+        "action": lambda content: re.sub(r"(\s*)\+\+\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\(.*[\w\.]*apple_sdk[\w\.]*[^\)]*\)", r"\1", content),
+    },
+    {
         "name": "Remove `with *.apple_sdk.*;`",
         "action": lambda content: re.sub(r"with\s*[\w\.]*apple_sdk[\w\.]*;", "", content),
     },
@@ -348,10 +356,6 @@ pipeline = [
     {
         "name": "Remove ++ optional isDarwin []",
         "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*\[\s*\]\s*", "", content),
-    },
-    {
-        "name": "Remove ++ optional isDarwin *apple_sdk*",
-        "action": lambda content: re.sub(r"(\s*)\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]*apple_sdk[\w\.]*\s*", r"\1", content),
     },
     {
         "name": "Remove X = optionals isDarwin [];",
