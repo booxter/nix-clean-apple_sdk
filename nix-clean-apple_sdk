@@ -252,6 +252,19 @@ def argument_is_used(content, argument):
     return False
 
 
+def clear_comments_above(lines):
+    new_lines = lines[:]
+    for i in range(len(new_lines) - 1, -1, -1):
+        line = new_lines[i]
+        if line.strip() == "":
+            continue
+        if line.strip().startswith("#"):
+            new_lines.pop(i)
+        else:
+            break
+    return new_lines
+
+
 def remove_argument(argument, content):
     if argument_is_used(content, argument):
         return content
@@ -267,6 +280,7 @@ def remove_argument(argument, content):
             reached_end = True
             continue
         if re.match(rf"\s*{argument}\s*,", line) or re.match(rf"\s*,\s*{argument}\s*", line):
+            new_lines = clear_comments_above(new_lines)
             continue
         new_lines.append(line)
     return "\n".join(new_lines)
@@ -334,6 +348,10 @@ pipeline = [
     {
         "name": "Simplify optionals isDarwin: ([...]) -> [...]",
         "action": lambda content: re.sub(r"(\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*)\((\s*\[[^\]]*\]\s*)\)", r"\1\2", content),
+    },
+    {
+        "name": "Simplify (optionals isDarwin [...]) -> optionals isDarwin [...]",
+        "action": lambda content: re.sub(r"\((\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[[^\]]*\]\s*)\)", r"\1", content),
     },
     {
         "name": "Simplify optionals isDarwin [newline...] -> isDarwin [...]",
