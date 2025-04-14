@@ -42,7 +42,6 @@ rustPlatform.buildRustPackage rec {
     ]
     ++ lib.optionals stdenv.hostPlatform.isDarwin [
       curl
-
     ];
 
   nativeCheckInputs = [
