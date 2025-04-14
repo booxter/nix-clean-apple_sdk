@@ -241,6 +241,7 @@ frameworks = [
     "vmnet",
 ] + [
     "libs.xpc",
+    "libs.sandbox",
     "Xplugin",
 
     # should more be added to the list?
@@ -368,6 +369,10 @@ pipeline = [
         "action": lambda content: re.sub(r"with\s*[\w\.]*darwin[\w\.]*;", "", content),
     },
     {
+        "name": "Replace darwin.apple_sdk_11_0.callPackage with callPackage",
+        "action": lambda content: re.sub(r"[\w\.]*\.apple_sdk[\w\.]*callPackage", "callPackage", content),
+    },
+    {
         "name": "Simplify optionals isDarwin: ([...]) -> [...]",
         "action": lambda content: re.sub(r"(\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*)\((\s*\[[^\]]*\]\s*)\)", r"\1\2", content),
     },
@@ -401,15 +406,15 @@ pipeline = [
     },
     {
         "name": "Remove ++ optional isDarwin <framework>",
-        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*({'|'.join(frameworks)})\s*", "", content),
+        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]*({'|'.join(frameworks)})\s*", "", content),
     },
     {
         "name": "Remove ++ optional(s) isDarwin [ <framework> ]",
-        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optionals?\s*[\w\.]*isDarwin\s*\[\s*({'|'.join(frameworks)})\s*\]", "", content),
+        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optionals?\s*[\w\.]*isDarwin\s*\[\s*[\w\.]*({'|'.join(frameworks)})\s*\]", "", content),
     },
     {
         "name": "Remove ++ optional (isDarwin && ...) <framework>",
-        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*\(\s*[\w\.]*isDarwin\s*&&\s*[^\)]*\)\s*({'|'.join(frameworks)})\s*", "", content),
+        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*\(\s*[\w\.]*isDarwin\s*&&\s*[^\)]*\)\s*[\w\.]*({'|'.join(frameworks)})\s*", "", content),
     },
     {
         "name": "Remove ++ optional isDarwin []",
@@ -420,8 +425,16 @@ pipeline = [
         "action": lambda content: re.sub(r"\s*[\w\.]+\s*=\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*;", "", content),
     },
     {
-        "name": "Remove X = optional isDarwin *apple_sdk*;",
-        "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*[\w\.]*apple_sdk[\w\.]*\s*;", "", content),
+        "name": "Remove X = optional(s) isDarwin *apple_sdk*;",
+        "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optionals?\s*[\w\.]*isDarwin\s*[\w\.]*apple_sdk[\w\.]*\s*;", "", content),
+    },
+    {
+        "name": "Remove X = optional(s) isDarwin [ *apple_sdk* ];",
+        "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optionals?\s*[\w\.]*isDarwin\s*\[\s*[\w\.]*apple_sdk[\w\.]*\s*\]\s*;", "", content),
+    },
+    {
+        "name": "Remove X = optional(s) isDarwin framework",
+        "action": lambda content: re.sub(rf"\s*(\w+)\s*=\s*[\w\.]*?optionals?\s*[\w\.]*?isDarwin\s*([\w\.]+\.)?({'|'.join(frameworks)})\s*;", "", content),
     },
     {
         "name": "Remove buildInputs = [ *apple_sdk* ];",
