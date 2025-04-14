@@ -238,6 +238,8 @@ frameworks = [
     "WidgetKit",
     "iTunesLibrary",
     "vmnet",
+] + [
+    "libs.xpc"
 ]
 # start filtering from the longest because some framework names are substrings of longer names
 frameworks = list(reversed(sorted(frameworks, key=len)))
@@ -384,7 +386,7 @@ pipeline = [
         "name": f"Remove unused argument {argument}",
         "action": functools.partial(remove_argument, argument),
     }
-    for argument in ("darwin", "stdenv")
+    for argument in ("darwin", "stdenv", "apple_sdk")
 ] + [
     {
         "name": f"Remove empty let/in",
