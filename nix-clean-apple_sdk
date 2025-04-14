@@ -318,6 +318,10 @@ pipeline = [
         "action": lambda content: re.sub(r"\s*(\w+)\s*=\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*;", "", content),
     },
     {
+        "name": "Handle X = optionals isDarwin [] ++",
+        "action": lambda content: re.sub(r"(\s*(\w+)\s*=\s*)[\w\.]*optionals\s*[\w\.]*isDarwin\s*\[\s*\]\s*\+\+", r"\1", content),
+    },
+    {
         "name": "Remove ++ ([])",
         "action": lambda content: re.sub(r"\s*\+\+\s*\(\s*\[\s*\]\s*\)", "", content),
     },
