@@ -286,6 +286,10 @@ pipeline = [
         "action": lambda content: re.sub(r"with\s*[\w\.]*apple_sdk[\w\.]*;", "", content),
     },
     {
+        "name": "Remove `with *.darwin.*;`",
+        "action": lambda content: re.sub(r"with\s*[\w\.]*darwin[\w\.]*;", "", content),
+    },
+    {
         "name": "Simplify optionals isDarwin: ([...]) -> [...]",
         "action": lambda content: re.sub(r"(\s*[\w\.]*optionals\s*[\w\.]*isDarwin\s*)\((\s*\[[^\]]*\]\s*)\)", r"\1\2", content),
     },
