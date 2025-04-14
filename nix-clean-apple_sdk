@@ -458,7 +458,7 @@ pipeline = [
 ] + [
     {
         "name": f"Remove empty let/in",
-        "action": lambda content: re.sub(r"let\s+in\s+", "", content, flags=re.DOTALL),
+        "action": lambda content: re.sub(r"let\n+in\s+", "", content, flags=re.DOTALL),
     },
 ]
 
