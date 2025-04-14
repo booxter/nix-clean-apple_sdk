@@ -397,6 +397,14 @@ pipeline = [
         "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optionals\s*\(\s*[\w\.]+\s*&&\s*[\w\.]*isDarwin\s*[^\)]*\)\s*\[\s*\]\s*", "", content),
     },
     {
+        "name": "Remove ++ optional isDarwin <framework>",
+        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*({'|'.join(frameworks)})\s*", "", content),
+    },
+    {
+        "name": "Remove ++ optional (isDarwin && ...) <framework>",
+        "action": lambda content: re.sub(rf"\s*\+\+\s*[\w\.]*optional\s*\(\s*[\w\.]*isDarwin\s*&&\s*[^\)]*\)\s*({'|'.join(frameworks)})\s*", "", content),
+    },
+    {
         "name": "Remove ++ optional isDarwin []",
         "action": lambda content: re.sub(r"\s*\+\+\s*[\w\.]*optional\s*[\w\.]*isDarwin\s*\[\s*\]\s*", "", content),
     },
